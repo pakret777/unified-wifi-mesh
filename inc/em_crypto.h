@@ -974,7 +974,13 @@ public:
 	 *
 	 * @note Ensure that the length of the UUID does not exceed the size of e_uuid in m_crypto_info.
 	 */
-	inline void set_e_uuid(unsigned char *uuid, unsigned int len) { memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.e_uuid), uuid, len); }
+	inline void set_e_uuid(unsigned char *uuid, unsigned int len) {
+	    if (len != sizeof(uuid_t)) {
+                return;
+            }
+
+	    memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.e_uuid), uuid, len);
+	}
     
 	/**!
 	 * @brief Sets the UUID for the crypto information.
@@ -986,7 +992,13 @@ public:
 	 *
 	 * @note Ensure that the length of the UUID does not exceed the allocated space in the internal structure.
 	 */
-	inline void set_r_uuid(unsigned char *uuid, unsigned int len) { memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.r_uuid), uuid, len); }
+	inline void set_r_uuid(unsigned char *uuid, unsigned int len) {
+            if (len != sizeof(uuid_t)) {
+                return;
+            }
+
+	    memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.r_uuid), uuid, len);
+	}
     
 	/**!
 	 * @brief Sets the encryption nonce.
@@ -998,7 +1010,12 @@ public:
 	 *
 	 * @note Ensure that the nonce data is of the correct length before calling this function.
 	 */
-	inline void set_e_nonce(unsigned char *nonce, unsigned int len) { memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.e_nonce), nonce, len); }
+	inline void set_e_nonce(unsigned char *nonce, unsigned int len) {
+            if (len != sizeof(em_nonce_t)) {
+                return;
+            }
+	    memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.e_nonce), nonce, len);
+	}
     
 	/**!
 	 * @brief Sets the r_nonce value.
@@ -1010,7 +1027,12 @@ public:
 	 *
 	 * @note Ensure that the nonce data is valid and the length is appropriate before calling this function.
 	 */
-	inline void set_r_nonce(unsigned char *nonce, unsigned int len) { memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.r_nonce), nonce, len); }
+	inline void set_r_nonce(unsigned char *nonce, unsigned int len) {
+            if (len != sizeof(em_nonce_t)) {
+                return;
+            }
+	    memcpy(reinterpret_cast<unsigned char *>(&m_crypto_info.r_nonce), nonce, len);
+	}
 
     
 	/**!
@@ -1104,7 +1126,12 @@ public:
 	 *
 	 * @note Ensure that the length of the public key data does not exceed the allocated space.
 	 */
-	inline void set_e_public(unsigned char *pub, unsigned int len) { memcpy(m_crypto_info.e_pub, pub, len); }
+	inline void set_e_public(unsigned char *pub, unsigned int len) {
+            if (len != DH_KEY_SZ) {
+                return;
+            }
+	    memcpy(m_crypto_info.e_pub, pub, len);
+	}
     
 	/**!
 	 * @brief Sets the public key.
@@ -1116,7 +1143,12 @@ public:
 	 *
 	 * @note Ensure that the length of the public key does not exceed the buffer size.
 	 */
-	inline void set_r_public(unsigned char *pub, unsigned int len) { memcpy(m_crypto_info.r_pub, pub, len); }
+	inline void set_r_public(unsigned char *pub, unsigned int len) {
+            if (len != DH_KEY_SZ) {
+               return;
+            }
+	    memcpy(m_crypto_info.r_pub, pub, len);
+	}
 
     
 	/**!
