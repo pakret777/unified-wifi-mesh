@@ -2611,7 +2611,7 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
 
     dm = get_data_model();
 
-    if(ap_mld_conf->num_ap_mld == 0) {
+    if((ap_mld_conf->num_ap_mld == 0) || (ap_mld_conf->num_ap_mld > EM_MAX_AP_MLD)) {
         em_printfout("Zero AP MLD data");
         return 0;
     }
@@ -2621,6 +2621,10 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
     ap_mld = ap_mld_conf->ap_mld;
 
     for (i = 0; i < ap_mld_conf->num_ap_mld; i++) {
+        if (ap_mld_len + sizeof(em_ap_mld_t) > len) {
+            em_printfout("Truncated AP MLD record");
+            return 0;
+        }
         em_ap_mld_info_t* ap_mld_info = &dm->m_ap_mld[i].m_ap_mld_info;
         if (ap_mld_info == NULL) {
            em_printfout("NULL pointer detected in ap_mld_info");
@@ -2628,7 +2632,13 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
         }
 
         ap_mld_info->mac_addr_valid = ap_mld->ap_mld_mac_addr_valid;
-        strncpy(ap_mld_info->ssid, ap_mld->ssid, ap_mld->ssid_len);
+        size_t ssid_len = ap_mld->ssid_len;
+ 
+        if (ssid_len >= sizeof(ap_mld_info->ssid)) {
+            ssid_len = sizeof(ap_mld_info->ssid) - 1;
+        }
+        strncpy(ap_mld_info->ssid, ap_mld->ssid, ssid_len);
+        ap_mld_info->ssid[ssid_len] = '\0';
 
         memcpy(ap_mld_info->mac_addr, ap_mld->ap_mld_mac_addr, sizeof(mac_address_t));
         ap_mld_info->str = ap_mld->str;
@@ -2636,10 +2646,18 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
         ap_mld_info->emlsr = ap_mld->emlsr;
         ap_mld_info->emlmr = ap_mld->emlmr;
 
+        if (ap_mld->num_affiliated_ap > EM_MAX_AP_MLD) {
+            em_printfout("Invalid affiliated AP count: %u", ap_mld->num_affiliated_ap);
+            return 0;
+        }
         ap_mld_info->num_affiliated_ap = ap_mld->num_affiliated_ap;
         affiliated_ap_mld = ap_mld->affiliated_ap_mld;
 
         for (j = 0; j < ap_mld->num_affiliated_ap; j++) {
+            if (ap_mld_len + sizeof(em_ap_mld_t) + affiliated_ap_len + sizeof(em_affiliated_ap_mld_t) > len) {
+                em_printfout("Truncated affiliated AP record");
+                return -1;
+            }
             em_affiliated_ap_info_t* affiliated_ap_info = &dm->m_ap_mld[i].m_ap_mld_info.affiliated_ap[j];
             affiliated_ap_info->mac_addr_valid = affiliated_ap_mld->affiliated_mac_addr_valid;
             affiliated_ap_info->link_id_valid = affiliated_ap_mld->link_id_valid;
