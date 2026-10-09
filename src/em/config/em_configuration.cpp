@@ -67,6 +67,15 @@ static const unsigned char em_vendor_oui[EM_VENDOR_OUI_SIZE] = {0xd8, 0x9c, 0x8e
 std::deque<time_t> g_failed_conn_report_timestamps;
 static std::mutex g_failed_conn_report_mutex;
 
+inline bool validate_tlv_length(uint16_t tlv_len, unsigned int tmp_len)
+{
+    if (tlv_len > (tmp_len - sizeof(em_tlv_t))) {
+        em_printfout("Invalid TLV length %u", tlv_len);
+        return false;
+    }
+    return true;
+}
+
 static bool allow_failed_conn_report(unsigned short max_reports_per_min)
 {
     if (max_reports_per_min == 0) {
@@ -2249,6 +2258,7 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
     em_t *al_em = nullptr;
     em_raw_hdr_t *hdr = reinterpret_cast<em_raw_hdr_t *>(buff);
     uint8_t *src_al_mac = hdr->src;
+    uint16_t tlv_len = 0;
     
 	dm = get_data_model();
     if (em_mgr_t *mgr = get_mgr()) {
@@ -2259,9 +2269,13 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
     tmp_len = len - static_cast<unsigned int> (sizeof(em_raw_hdr_t) + sizeof(em_cmdu_t));
         
     while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
         if (tlv->type != em_tlv_type_profile) {
-            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + htons(tlv->len));
-            tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + tlv_len);
+            tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + tlv_len);
 
             continue;
 
@@ -2299,9 +2313,13 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
     tmp_len = len - static_cast<unsigned int> (sizeof(em_raw_hdr_t) + sizeof(em_cmdu_t));
 
 	while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
 		if (tlv->type != em_tlv_type_vendor_operational_bss) {
-			tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + htons(tlv->len));
-			tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+			tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + tlv_len);
+			tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + tlv_len);
 			continue;
 		} else {
 			handle_ap_vendor_operational_bss(tlv->value, tlv->len);
@@ -2311,9 +2329,13 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
 	tlv =  reinterpret_cast<em_tlv_t *> (buff + sizeof(em_raw_hdr_t) + sizeof(em_cmdu_t));
 	tmp_len = len - static_cast<unsigned int> (sizeof(em_raw_hdr_t) + sizeof(em_cmdu_t)); 
     while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
         if (tlv->type != em_tlv_type_operational_bss) {
-            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + htons(tlv->len));
-            tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + tlv_len);
+            tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + tlv_len);
 
             continue;
 
@@ -2342,9 +2364,13 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
 
 
     while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
         if (tlv->type != em_tlv_type_bss_conf_rep) {
-            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + htons(tlv->len));
-            tlv = reinterpret_cast <em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + tlv_len);
+            tlv = reinterpret_cast <em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + tlv_len);
 
             continue;
 
@@ -2366,9 +2392,13 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
     }
 
     while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
         if (tlv->type != em_tlv_type_bh_sta_radio_cap) {
-            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + htons(tlv->len));
-            tlv = reinterpret_cast <em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+            tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + tlv_len);
+            tlv = reinterpret_cast <em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + tlv_len);
             continue;
         } else {
             handle_bsta_radio_cap(tlv->value, tlv->len);
@@ -2377,9 +2407,13 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
     }
 
     while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
         if (tlv->type != em_tlv_type_ap_mld_config) {
             tmp_len -= static_cast<unsigned int> (sizeof(em_tlv_t) + htons(tlv->len));
-            tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+            tlv = reinterpret_cast<em_tlv_t *> (reinterpret_cast<unsigned char *> (tlv) + sizeof(em_tlv_t) + tlv_len);
 
             continue;
 
@@ -2400,13 +2434,17 @@ int em_configuration_t::handle_topology_response(unsigned char *buff, unsigned i
     tmp_len = len - static_cast<unsigned int>(sizeof(em_raw_hdr_t) + sizeof(em_cmdu_t));
     assoc_sta_mld_count = 0;
     while ((tlv->type != em_tlv_type_eom) && (tmp_len > 0)) {
+        tlv_len = htons(tlv->len);
+        if (!validate_tlv_length(tlv_len, tmp_len)) {
+            return -1;
+        }
         if (tlv->type == em_tlv_type_assoc_sta_mld_conf_rep) {
             em_printfout("Found Assoc STA MLD Configuration Report TLV #%u", assoc_sta_mld_count);
-            handle_assoc_sta_mld_conf_rep_tlv(tlv->value, htons(tlv->len));
+            handle_assoc_sta_mld_conf_rep_tlv(tlv->value, tlv_len);
             assoc_sta_mld_count++;
         }
-        tmp_len -= static_cast<unsigned int>(sizeof(em_tlv_t) + htons(tlv->len));
-        tlv = reinterpret_cast<em_tlv_t *>(reinterpret_cast<unsigned char *>(tlv) + sizeof(em_tlv_t) + htons(tlv->len));
+        tmp_len -= static_cast<unsigned int>(sizeof(em_tlv_t) + tlv_len);
+        tlv = reinterpret_cast<em_tlv_t *>(reinterpret_cast<unsigned char *>(tlv) + sizeof(em_tlv_t) + tlv_len);
     }
     em_printfout("Total Assoc STA MLD TLVs parsed: %u, m_num_assoc_sta_mld=%u",
         assoc_sta_mld_count, dm->m_num_assoc_sta_mld);
@@ -2611,7 +2649,7 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
 
     dm = get_data_model();
 
-    if(ap_mld_conf->num_ap_mld == 0) {
+    if((ap_mld_conf->num_ap_mld == 0) || (ap_mld_conf->num_ap_mld > EM_MAX_AP_MLD)) {
         em_printfout("Zero AP MLD data");
         return 0;
     }
@@ -2621,6 +2659,10 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
     ap_mld = ap_mld_conf->ap_mld;
 
     for (i = 0; i < ap_mld_conf->num_ap_mld; i++) {
+        if (ap_mld_len + sizeof(em_ap_mld_t) > len) {
+            em_printfout("Truncated AP MLD record");
+            return 0;
+        }
         em_ap_mld_info_t* ap_mld_info = &dm->m_ap_mld[i].m_ap_mld_info;
         if (ap_mld_info == NULL) {
            em_printfout("NULL pointer detected in ap_mld_info");
@@ -2628,7 +2670,13 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
         }
 
         ap_mld_info->mac_addr_valid = ap_mld->ap_mld_mac_addr_valid;
-        strncpy(ap_mld_info->ssid, ap_mld->ssid, ap_mld->ssid_len);
+        size_t ssid_len = ap_mld->ssid_len;
+ 
+        if (ssid_len >= sizeof(ap_mld_info->ssid)) {
+            ssid_len = sizeof(ap_mld_info->ssid) - 1;
+        }
+        strncpy(ap_mld_info->ssid, ap_mld->ssid, ssid_len);
+        ap_mld_info->ssid[ssid_len] = '\0';
 
         memcpy(ap_mld_info->mac_addr, ap_mld->ap_mld_mac_addr, sizeof(mac_address_t));
         ap_mld_info->str = ap_mld->str;
@@ -2636,10 +2684,18 @@ int em_configuration_t::handle_ap_mld_config_tlv(unsigned char *buff, unsigned i
         ap_mld_info->emlsr = ap_mld->emlsr;
         ap_mld_info->emlmr = ap_mld->emlmr;
 
+        if (ap_mld->num_affiliated_ap > EM_MAX_AP_MLD) {
+            em_printfout("Invalid affiliated AP count: %u", ap_mld->num_affiliated_ap);
+            return 0;
+        }
         ap_mld_info->num_affiliated_ap = ap_mld->num_affiliated_ap;
         affiliated_ap_mld = ap_mld->affiliated_ap_mld;
 
         for (j = 0; j < ap_mld->num_affiliated_ap; j++) {
+            if (ap_mld_len + sizeof(em_ap_mld_t) + affiliated_ap_len + sizeof(em_affiliated_ap_mld_t) > len) {
+                em_printfout("Truncated affiliated AP record");
+                return -1;
+            }
             em_affiliated_ap_info_t* affiliated_ap_info = &dm->m_ap_mld[i].m_ap_mld_info.affiliated_ap[j];
             affiliated_ap_info->mac_addr_valid = affiliated_ap_mld->affiliated_mac_addr_valid;
             affiliated_ap_info->link_id_valid = affiliated_ap_mld->link_id_valid;
@@ -4361,9 +4417,13 @@ int em_configuration_t::handle_wsc_m2(unsigned char *buff, unsigned int len, uns
                 return -1;
             }
         } else if (id == attr_id_registrar_nonce) {
-            set_r_nonce(attr->val, htons(attr->len));
+            if(!set_r_nonce(attr->val, htons(attr->len))) {
+			    return -1;
+			}
         } else if (id == attr_id_public_key) {
-            set_r_public(attr->val, htons(attr->len));
+            if(!set_r_public(attr->val, htons(attr->len))) {
+			    return -1;
+			}
         } else if (id == attr_id_encrypted_settings) {
             memcpy(&m_m2_encrypted_settings[index][0], attr->val, htons(attr->len));
             m_m2_encrypted_settings_len[index] = htons(attr->len);
@@ -4392,6 +4452,7 @@ int em_configuration_t::handle_wsc_m1(unsigned char *buff, unsigned int len)
     em_freq_band_t  band;
     dm_radio_t *radio;
     unsigned int found = 0, i  = 0;
+    uint16_t attr_len = 0;
 
 	dm = get_data_model();
 	memset(&dev_info, 0, sizeof(em_device_info_t));
@@ -4423,17 +4484,23 @@ int em_configuration_t::handle_wsc_m1(unsigned char *buff, unsigned int len)
                 return -1;
             }
         } else if (id == attr_id_uuid_e) {
-            set_e_uuid(attr->val, htons(attr->len));
+            if(!set_e_uuid(attr->val, htons(attr->len))) {
+			    return -1;
+			}
             //printf("%s:%d: enrollee uuid length:%d\n", __func__, __LINE__, htons(attr->len));
         } else if (id == attr_id_mac_address) {
             set_e_mac(attr->val);
             dm_easy_mesh_t::macbytes_to_string(attr->val, mac_str);
             //printf("%s:%d: enrollee mac address:%s\n", __func__, __LINE__, mac_str);
         } else if (id == attr_id_enrollee_nonce) {
-            set_e_nonce(attr->val, htons(attr->len));
+            if(!set_e_nonce(attr->val, htons(attr->len))) {
+			    return -1;
+			}
             //printf("%s:%d: enrollee nonce length:%d\n", __func__, __LINE__, htons(attr->len));
         } else if (id == attr_id_public_key) {
-            set_e_public(attr->val, htons(attr->len));
+            if(!set_e_public(attr->val, htons(attr->len))) {
+			    return -1;
+			}
             //printf("%s:%d: enrollee public key length:%d\n", __func__, __LINE__, htons(attr->len));
         } else if (id == attr_id_auth_type_flags) {
             uint16_t auth_flags = 0;
@@ -4465,18 +4532,36 @@ int em_configuration_t::handle_wsc_m1(unsigned char *buff, unsigned int len)
         } else if (id == attr_id_cfg_methods) {
         } else if (id == attr_id_wifi_wsc_state) {
         } else if (id == attr_id_manufacturer) {
-            memcpy(dev_info.manufacturer, attr->val, htons(attr->len));
+            attr_len = htons(attr->len);
+            if (attr_len >= sizeof(dev_info.manufacturer)) {
+                em_printfout("Invalid manufacturer length %u", attr_len);
+                return -1;
+            }
+            memcpy(dev_info.mainufacturer, attr->val, attr_len);
+            dev_info.manufacturer[attr_len] = '\0';
             set_manufacturer(dev_info.manufacturer);
             //printf("%s:%d: Manufacturer:%s\n", __func__, __LINE__, dev_info.manufacturer);
             dm->set_db_cfg_param(db_cfg_type_device_list_update, "");
         } else if (id == attr_id_model_name) {
-            memcpy(dev_info.manufacturer_model, attr->val, htons(attr->len));
+            attr_len = htons(attr->len);
+            if (attr_len >= sizeof(dev_info.manufacturer_model)) {
+                em_printfout("Invalid model name length %u", attr_len);
+                return -1;
+            }
+            memcpy(dev_info.manufacturer_model, attr->val, attr_len);
+            dev_info.manufacturer_model[attr_len] = '\0';
             set_manufacturer_model(dev_info.manufacturer_model);
             dm->set_db_cfg_param(db_cfg_type_device_list_update, "");
             //printf("%s:%d: Manufacturer Model:%s\n", __func__, __LINE__, dev_info.manufacturer_model);
         } else if (id == attr_id_model_number) {
         } else if (id == attr_id_serial_num) {
-            memcpy(dev_info.serial_number, attr->val, htons(attr->len));
+            attr_len = htons(attr->len);
+            if (attr_len >= sizeof(dev_info.serial_number)) {
+                em_printfout("Invalid serial number length %u", attr_len);
+                return -1;
+            }
+            memcpy(dev_info.serial_number, attr->val, attr_len);
+            dev_info.serial_number[attr_len] = '\0';
             set_serial_number(dev_info.serial_number);
             //printf("%s:%d: Manufacturer:%s\n", __func__, __LINE__, dev_info.serial_number);
             em_printfout("Updated dm dev_info's backhaul_mac: %s and backhaul_alid: %s",
